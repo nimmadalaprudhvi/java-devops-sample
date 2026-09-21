@@ -30,3 +30,8 @@ jobs:
 
       - name: Unit Tests
         run: mvn test
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
