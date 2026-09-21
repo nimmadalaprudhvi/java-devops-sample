@@ -35,7 +35,6 @@ jobs:
       - name: Build and Test
         run: mvn clean verify
 
-      # 4. SonarQube / SonarCloud Analysis
       - name: SonarQube Analysis
         run: |
           mvn sonar:sonar \
@@ -45,3 +44,8 @@ jobs:
             -Dsonar.qualitygate.wait=true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t java-devops-sample:${{ github.sha }} .
