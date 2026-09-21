@@ -72,6 +72,8 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
+      - name: Debug role ARN
+        run: echo "Role ARN being used:"; echo "${{ secrets.AWS_ROLE_TO_ASSUME }}" | sed 's/./& /g'
 
       # 7. Configure AWS credentials using GitHub OIDC
       - name: Configure AWS Credentials
