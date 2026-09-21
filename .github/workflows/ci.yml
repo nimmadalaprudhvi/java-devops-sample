@@ -1,37 +1,47 @@
-name: Java CI
+name: Java CI/CD
 
 on:
   push:
     branches:
       - main
+
   pull_request:
     branches:
       - main
 
 jobs:
-  build-test:
+
+  build-test-sonar:
 
     runs-on: ubuntu-latest
 
     steps:
 
+      # 1. Get source code
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Java
+      # 2. Install Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
 
-      - name: Build
-        run: mvn clean package -DskipTests
+      # 3. Build + Unit Tests
+      - name: Build and Test
+        run: mvn clean verify
 
-      - name: Unit Tests
-        run: mvn test
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v7
+      # 4. SonarQube / SonarCloud Analysis
+      - name: SonarQube Analysis
+        run: |
+          mvn sonar:sonar \
+            -Dsonar.projectKey=nimmadalaprudhvi_java-devops-sample \
+            -Dsonar.organization=nimmadalaprudhvi \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.qualitygate.wait=true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
