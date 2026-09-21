@@ -51,7 +51,7 @@ jobs:
             -t java-devops-sample:${{ github.sha }} .
 
       - name: Trivy Vulnerability Scan
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: java-devops-sample:${{ github.sha }}
           format: table
