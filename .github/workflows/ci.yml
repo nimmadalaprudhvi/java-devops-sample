@@ -9,6 +9,11 @@ on:
     branches:
       - main
 
+# Required for GitHub OIDC → AWS
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
 
   build-test-sonar:
@@ -17,13 +22,14 @@ jobs:
 
     steps:
 
-      # 1. Get source code
+      # 1. Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Install Java
+
+      # 2. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -31,10 +37,13 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # 3. Build + Unit Tests
+
+      # 3. Build application and run unit tests
       - name: Build and Test
         run: mvn clean verify
 
+
+      # 4. SonarCloud analysis + Quality Gate
       - name: SonarQube Analysis
         run: |
           mvn sonar:sonar \
@@ -45,16 +54,49 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+
+      # 5. Build Docker image
       - name: Build Docker Image
         run: |
           docker build \
             -t java-devops-sample:${{ github.sha }} .
 
+
+      # 6. Scan Docker image with Trivy
       - name: Trivy Vulnerability Scan
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: java-devops-sample:${{ github.sha }}
           format: table
           exit-code: '1'
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+
+
+      # 7. Configure AWS credentials using GitHub OIDC
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ap-south-1
+
+
+      # 8. Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2.1.6
+
+
+      # 9. Tag and push Docker image to ECR
+      - name: Push Docker Image to ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: java-devops-sample
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag \
+            java-devops-sample:$IMAGE_TAG \
+            $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+          docker push \
+            $REGISTRY/$REPOSITORY:$IMAGE_TAG
